@@ -34,9 +34,8 @@ function Params(T = Float64;
     return Params(T(θ0), T(π0), T(Π), T(S), T(f))
 end
 
-function get_Rd(p::Params)
-    return p.S*p.Π^2/p.f^2
-end
+get_Rd(p::Params) = p.S*p.Π^2/p.f^2
+float_type(p::Params{T}) where {T} = T
 
 function Domain(p::Params{T}; 
     x = (-3, 3), y = (-3, 3),
@@ -44,6 +43,8 @@ function Domain(p::Params{T};
 ) where {T}
 
     π0 = p.π0
+    x = T.(x)
+    y = T.(y)
     z = (π0, π0 - 1)
     nx, ny, nz = size
     hx, hy, hz = halo
