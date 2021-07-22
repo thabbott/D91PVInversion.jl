@@ -6,6 +6,19 @@ struct Params{FT}
     f :: FT
 end
 
+function Params(T = Float64; 
+    θ0 = 285, θT = 340, π0 = 1000, πT = 500, f = 4π/86400*sind(45)
+)
+    Π = π0 - πT
+    S = (θT - θ0)/Π
+    θ0 = θ0/(S*Π)
+    π0 = π0/Π
+    return Params(T(θ0), T(π0), T(Π), T(S), T(f))
+end
+
+get_Rd(p::Params) = sqrt(p.S*p.Π^2/p.f^2)
+float_type(p::Params{T}) where {T} = T
+
 struct Domain{R,I,FT,A}
     x :: R
     y :: R
@@ -23,19 +36,6 @@ struct Domain{R,I,FT,A}
     yc :: A
     zc :: A
 end
-
-function Params(T = Float64; 
-    θ0 = 285, θT = 340, π0 = 1000, πT = 500, f = 2/86400*sind(30)
-)
-    Π = π0 - πT
-    S = (θT - θ0)/Π
-    θ0 = θ0/(S*Π)
-    π0 = π0/Π
-    return Params(T(θ0), T(π0), T(Π), T(S), T(f))
-end
-
-get_Rd(p::Params) = p.S*p.Π^2/p.f^2
-float_type(p::Params{T}) where {T} = T
 
 function Domain(p::Params{T}; 
     x = (-3, 3), y = (-3, 3),
@@ -101,4 +101,44 @@ end
 function rhs_from_field(f, d::Domain)
     rhs = new_rhs(d)
     return rhs_from_field!(rhs, f, d)
+end
+
+mutable struct Convergence{FT,I}
+    Δ :: FT
+    n :: I
+end
+
+struct Solver{FT}
+    atol :: FT
+    convergence :: Convergence{FT}
+    ω :: FT
+end
+
+function Solver(p::Params; atolϕ = 1e0, ω = 0.7)
+    S = p.S
+    Π = p.Π
+    atol = atolϕ/(S*Π^2)
+    T = float_type(p)
+    return Solver(T(atol), Convergence(T(0), 0), T(ω))
+end
+
+function is_converged(s::Solver)
+    return s.convergence.Δ ≤ s.atol
+end
+
+function set_Δ!(s::Solver, Δ)
+    s.convergence.Δ = Δ
+    return s
+end
+
+function increment!(s::Solver, n = 1)
+    s.convergence.n += n
+    return s
+end
+
+function print_convergence_info(s::Solver)
+    n = s.convergence.n
+    Δ = s.convergence.Δ
+    tol = s.atol
+    print(n, "\tΔ = ", Δ, "; ", Δ/tol, "x tolerance\n")
 end

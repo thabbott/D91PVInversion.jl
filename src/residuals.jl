@@ -1,6 +1,6 @@
-function compute_qg_rψ(Lψ, xψ, ∂ψ, bψ, d::Domain)
-    rψ = new_rhs(d)
-    mul!(rψ, Lψ, xψ)
-    @. rψ = rψ + ∂ψ - bψ
-    return rψ
+function compute_residual(L, x, ∂, b, d::Domain)
+    ϵ = new_rhs(d)
+    mul!(ϵ, L, x)
+    @. ϵ = ϵ + ∂ - b
+    return ϵ
 end

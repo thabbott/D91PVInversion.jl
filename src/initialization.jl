@@ -5,8 +5,7 @@ end
 function allocate_rhs(d::Domain)
     return (
         ψ = new_rhs(d), ∂ψ = new_rhs(d), bψ = new_rhs(d),
-        ϕ = new_rhs(d), ∂ϕ = new_rhs(d), bϕ = new_rhs(d),
-        q = new_rhs(d)
+        ϕ = new_rhs(d), ∂ϕ = new_rhs(d), bϕ = new_rhs(d)
     )
 end
 

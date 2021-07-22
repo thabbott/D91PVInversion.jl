@@ -130,3 +130,12 @@ end
 ∂x²(I::CartesianIndex{3},f,d::Domain) = (f[I-dx] - 2f[I] + f[I+dx])/d.Δx^2
 ∂y²(I::CartesianIndex{3},f,d::Domain) = (f[I-dy] - 2f[I] + f[I+dy])/d.Δy^2
 ∂z²(I::CartesianIndex{3},f,d::Domain) = (f[I-dz] - 2f[I] + f[I+dz])/d.Δz^2
+∂xy(I::CartesianIndex{3},f,d::Domain) = (
+    f[I+dx+dy] + f[I-dx-dy] - f[I+dx-dy] - f[I-dx+dy]
+)/(4*d.Δx*d.Δy)
+∂xz(I::CartesianIndex{3},f,d::Domain) = (
+    f[I+dx+dz] + f[I-dx-dz] - f[I+dx-dz] - f[I-dx+dz]
+)/(4*d.Δx*d.Δz)
+∂yz(I::CartesianIndex{3},f,d::Domain) = (
+    f[I+dy+dz] + f[I-dy-dz] - f[I+dy-dz] - f[I-dy+dz]
+)/(4*d.Δy*d.Δz)

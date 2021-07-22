@@ -1,6 +1,7 @@
 using D92PVInversion
 using IterativeSolvers
 using Random
+using Printf
 import PyPlot; const plt = PyPlot
 
 # Set up inversion domain
@@ -33,7 +34,7 @@ set_qg_bψ!(bψ, q, domain)
 
 # Compute residual
 rhs_from_field!(xψ, ψ, domain)
-rψ = field_from_rhs(compute_qg_rψ(Lψ, xψ, ∂ψ, bψ, domain), domain)
+rψ = field_from_rhs(compute_residual(Lψ, xψ, ∂ψ, bψ, domain), domain)
 nx, ny, nz = size(domain)
 rψmid = 0.5*(rψ[1:nx,24,1:nz] + rψ[1:nx,25,1:nz])
 
@@ -72,13 +73,21 @@ print("Vertical penetration: ", vpen)
 
 # Plot solution
 fig, axes = plt.subplots(
-    figsize = (9.5, 2), nrows = 1, ncols = 4, 
+    figsize = (9.5, 3), nrows = 1, ncols = 4, 
     sharey = true, sharex = true, constrained_layout = true
 )
 c = axes[1].contour(x, z, qmid', colors = "black")
+Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
+axes[1].set_title(@sprintf("q\nmax %.1e\ncontour interval %.1e", maximum(q), Δc))
 c = axes[2].contour(x, z, vmid', colors = "black")
+Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
+axes[2].set_title(@sprintf("v\nmax %.1e\ncontour interval %.1e", maximum(v), Δc))
 c = axes[3].contour(x, z, ζmid', colors = "black")
+Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
+axes[3].set_title(@sprintf("ζ\nmax %.1e\ncontour interval %.1e", maximum(ζ), Δc))
 c = axes[4].contour(x, z, θmid', colors = "black")
+Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
+axes[4].set_title(@sprintf("θ\nmax %.1e\ncontour interval %.1e", maximum(θ), Δc))
 axes[1].set_xlim([-1, 1])
 axes[1].invert_yaxis()
 plt.show()

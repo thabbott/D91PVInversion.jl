@@ -111,7 +111,7 @@ plt.show()
 
 # Compute residual
 rhs_from_field!(xψ, ψ, domain)
-rψ = field_from_rhs(compute_qg_rψ(Lψ, xψ, ∂ψ, bψ, domain), domain)
+rψ = field_from_rhs(compute_residual(Lψ, xψ, ∂ψ, bψ, domain), domain)
 
 # Plot residual
 fig, axes = plt.subplots(
