@@ -1,0 +1,10 @@
+name = "D92PVInversion"
+uuid = "7992b063-8239-4a6e-8258-ff87ffba6f2a"
+authors = ["Tristan Abbott <tabbott0312@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
+LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
