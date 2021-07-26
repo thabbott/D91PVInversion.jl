@@ -1,4 +1,4 @@
-# D92PVInversion.jl
+# D91PVInversion.jl
 
 Julia code (I hesitate to call it a package yet...) for non-linear potential vorticity inversion following [Davis and Emanuel (1991)](https://doi.org/10.1175/1520-0493(1991)119<1929:PVDOC>2.0.CO;2). It's still under development, *hasn't been tested thoroughly*, isn't well-documented, hasn't been used for any publications, and hasn't been benchmarked against any other codes that perform similar calculations. So feel free to use it, but don't trust it and don't assume it's more performant than other codes!
 
