@@ -4,109 +4,37 @@ using Random
 using Printf
 import PyPlot; const plt = PyPlot
 
+# Define functional form of PV anomaly
+function q′(x, y, z, A, L, H, p)
+    πc = p.π0 - 0.5
+    Π = p.Π
+    return A*exp(-(x^2 + y^2)/L^2)*exp(-(z-πc)^2/H^2)
+end
+
 # Set up inversion domain
 params = Params(Float64)
 domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
-println(params)
-println(domain)
 
-# Create solvers
-sψ = Solver(params; ω = 0.7)
-sϕ = Solver(params; ω = 0.7)
+# Create inversion problem
+inv = NLInversion(domain = domain, params = params)
 
-# Allocate storage for fields and vectors
-ψ, ϕ, q = allocate_fields(domain)
-xψ, ∂ψ, bψ, xϕ, ∂ϕ, bϕ = allocate_rhs(domain)
+# Initialize problem
+A = 30
+L = 0.1
+H = 0.1
+initialize!(inv, q′, A, L, H, params)
 
-# Set initial values
-set_background_ψ!(ψ, domain, params)
-set_background_ϕ!(ϕ, domain, params)
-
-# Set PV field
-set_q!(q, domain, params; A = 30)
-
-# Construct linear operators
-Lψ = generate_Lψ(ϕ, domain)
-Lϕ = generate_Lϕ(ψ, domain)
-
-# Fill halos
-fill_ψ_halos!(ψ, domain, params)
-fill_ϕ_halos!(ϕ, domain, params)
-
-# Solver iteratively
+# Solve
+Random.seed!(1234)
 while true
-
-    # Set boundary contributions to ψ RHS
-    set_∂ψ!(∂ψ, ϕ, domain, params)
-
-    # Set ψ RHS
-    set_bψ!(bψ, ψ, ϕ, q, domain)
-
-    # Compute and plot residual
-    # rhs_from_field!(xψ, ψ, domain)
-    # rψ = field_from_rhs(compute_residual(Lψ, xψ, ∂ψ, bψ, domain), domain)
-    # nx, ny, nz = size(domain)
-    # rψmid = 0.5*(rψ[1:nx,24,1:nz] + rψ[1:nx,25,1:nz])
-    # plt.figure()
-    # plt.imshow(rψmid')
-    # plt.gca().invert_yaxis()
-    # plt.title("ψ residual")
-    # plt.show()
-
-    # Solve for ψ
-    Random.seed!(1234)
-    @. bψ = bψ - ∂ψ
-    bicgstabl!(xψ, Lψ, bψ; log = false, verbose = false)
-    relax!(ψ, xψ, sψ, domain; verbose = true)
-    fill_ψ_halos!(ψ, domain, params)
-
-    # Plot solution
-    # nx, ny, nz = size(domain)
-    # ψmid = 0.5*(ψ[1:nx,24,1:nz] + ψ[1:nx,25,1:nz])
-    # plt.figure()
-    # plt.imshow(ψmid')
-    # plt.gca().invert_yaxis()
-    # plt.title("ψ")
-    # plt.show()
-
-    # Set boundary contributions to ϕ RHS
-    set_∂ϕ!(∂ϕ, ψ, domain, params)
-
-    # Set ϕ RHS
-    set_bϕ!(bϕ, ψ, ϕ, q, domain)
-
-    # Compute and plot residual
-    # rhs_from_field!(xϕ, ϕ, domain)
-    # rϕ = field_from_rhs(compute_residual(Lϕ, xϕ, ∂ϕ, bϕ, domain), domain)
-    # nx, ny, nz = size(domain)
-    # rϕmid = 0.5*(rϕ[1:nx,24,1:nz] + rϕ[1:nx,25,1:nz])
-    # plt.figure()
-    # plt.imshow(rϕmid')
-    # plt.gca().invert_yaxis()
-    # plt.title("ϕ residual")
-    # plt.show()
-
-    # Solve for ϕ
-    @. bϕ = bϕ - ∂ϕ
-    bicgstabl!(xϕ, Lϕ, bϕ; log = false, verbose = false)
-    relax!(ϕ, xϕ, sϕ, domain; verbose = true)
-    fill_ϕ_halos!(ϕ, domain, params)
-
-    # Plot solution
-    # nx, ny, nz = size(domain)
-    # ϕmid = 0.5*(ϕ[1:nx,24,1:nz] + ϕ[1:nx,25,1:nz])
-    # plt.figure()
-    # plt.imshow(ϕmid')
-    # plt.gca().invert_yaxis()
-    # plt.title("ϕ")
-    # plt.show()
-
-    # Exit loop if converged
-    is_converged(sψ) && is_converged(sϕ) && break
-
+    iterate!(inv; verbose = true)
+    is_converged(inv) && break
 end
 
 # Compute diagnostics
+ψ = inv.ψ
+ϕ = inv.ϕ
+q = inv.q
 u = diagnose_umag(ψ, domain)
 v = diagnose_v(ψ, domain)
 ζ = diagnose_ζ(ψ, domain)

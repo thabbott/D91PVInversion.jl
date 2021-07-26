@@ -1,4 +1,4 @@
-function set_qg_bψ!(bψ, q, d::Domain)
+function set_linear_bψ!(bψ, q, d::Domain)
     c = CartesianIndices(d)
     l = LinearIndices(d)
     for I = c

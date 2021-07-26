@@ -1,58 +1,36 @@
 using D91PVInversion
-using IterativeSolvers
 using Random
 using Printf
 import PyPlot; const plt = PyPlot
 
+# Define functional form of PV anomaly
+function q′(x, y, z, A, L, H, p)
+    πc = p.π0 - 0.5
+    Π = p.Π
+    return A*exp(-(x^2 + y^2)/L^2)*exp(-(z-πc)^2/H^2)
+end
+
 # Set up inversion domain
 params = Params(Float64)
 domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
-println(params)
-println(domain)
 
-# Allocate storage for fields and vectors
-ψ, ϕ, q = allocate_fields(domain)
-xψ, ∂ψ, bψ, xϕ, ∂ϕ, bϕ = allocate_rhs(domain)
+# Create inversion problem
+inv = LinearInversion(domain = domain, params = params)
 
-# Set initial values
-set_background_ψ!(ψ, domain, params)
+# Initialize problem
+A = 30
+L = 0.1
+H = 0.1
+initialize!(inv, q′, A, L, H, params)
 
-# Set PV field
-set_q!(q, domain, params; A = 10)
-
-# Construct linear operator for QG-like inversion
-Lψ = generate_qg_Lψ(domain; T = float_type(params))
-
-# Fill halos
-fill_ψ_halos!(ψ, domain, params)
-
-# Set boundary contributions to RHS 
-set_qg_∂ψ!(∂ψ, domain, params)
-
-# Set RHS
-set_qg_bψ!(bψ, q, domain)
-
-# Compute residual
-rhs_from_field!(xψ, ψ, domain)
-rψ = field_from_rhs(compute_residual(Lψ, xψ, ∂ψ, bψ, domain), domain)
-nx, ny, nz = size(domain)
-rψmid = 0.5*(rψ[1:nx,24,1:nz] + rψ[1:nx,25,1:nz])
-
-# Plot residual
-plt.figure()
-plt.imshow(rψmid')
-plt.gca().invert_yaxis()
-plt.title("ψ residual")
-plt.show()
-
-# Solve
+# Invert (just a single iteration)
 Random.seed!(1234)
-@. bψ = bψ - ∂ψ
-bicgstabl!(xψ, Lψ, bψ; log = false, verbose = true)
-field_from_rhs!(ψ, xψ, domain)
-fill_ψ_halos!(ψ, domain, params)
+iterate!(inv; verbose = true)
+println("is_converged = ", is_converged(inv))
 
 # Compute diagnostics
+ψ = inv.ψ
+q = inv.q
 u = diagnose_umag(ψ, domain)
 v = diagnose_v(ψ, domain)
 ζ = diagnose_ζ(ψ, domain)
@@ -78,16 +56,16 @@ fig, axes = plt.subplots(
 )
 c = axes[1].contour(x, z, qmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[1].set_title(@sprintf("q\nmax %.1e\ncontour interval %.1e", maximum(q), Δc))
+axes[1].set_title(@sprintf("q\nmax %.1e\ncontour interval %.1e", maximum(qmid), Δc))
 c = axes[2].contour(x, z, vmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[2].set_title(@sprintf("v\nmax %.1e\ncontour interval %.1e", maximum(v), Δc))
+axes[2].set_title(@sprintf("v\nmax %.1e\ncontour interval %.1e", maximum(vmid), Δc))
 c = axes[3].contour(x, z, ζmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[3].set_title(@sprintf("ζ\nmax %.1e\ncontour interval %.1e", maximum(ζ), Δc))
+axes[3].set_title(@sprintf("ζ\nmax %.1e\ncontour interval %.1e", maximum(ζmid), Δc))
 c = axes[4].contour(x, z, θmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[4].set_title(@sprintf("θ\nmax %.1e\ncontour interval %.1e", maximum(θ), Δc))
+axes[4].set_title(@sprintf("θ\nmax %.1e\ncontour interval %.1e", maximum(θmid), Δc))
 axes[1].set_xlim([-1, 1])
 axes[1].invert_yaxis()
 plt.show()

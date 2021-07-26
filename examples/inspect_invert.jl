@@ -3,6 +3,13 @@ using IterativeSolvers
 using Random
 import PyPlot; const plt = PyPlot
 
+# Define functional form of PV anomaly
+function q′(x, y, z, A, L, H, p::Params)
+    πc = p.π0 - 0.5
+    Π = p.Π
+    return A*exp(-(x^2 + y^2)/L^2)*exp(-(z-πc)^2/H^2)
+end
+
 # Set up inversion domain
 params = Params(Float64)
 domain = Domain(params, size = (3, 3, 3), x = (-1, 1)./2, y = (-1, 1)./2)
@@ -22,7 +29,11 @@ set_background_ψ!(ψ, domain, params)
 set_background_ϕ!(ϕ, domain, params)
 
 # Set PV field
-set_q!(q, domain, params; A = 0)
+# Set PV field
+A = 0
+L = 0.1
+H = 0.1
+set_q!(q, domain, params, q′, A, L, H, params)
 
 # Plot fields
 plt.rc("font", size = 8)

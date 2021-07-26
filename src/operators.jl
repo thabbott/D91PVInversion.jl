@@ -1,4 +1,4 @@
-function generate_qg_Lψ(d::Domain; T = Float64)
+function generate_linear_Lψ(d::Domain; T = Float64)
     function L!(y::AbstractVector, x::AbstractVector)
         Δx² = d.Δx^2
         Δy² = d.Δy^2

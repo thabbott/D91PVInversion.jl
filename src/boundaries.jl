@@ -1,4 +1,4 @@
-function set_qg_∂ψ!(∂ψ, d::Domain, p::Params)
+function set_linear_∂ψ!(∂ψ, d::Domain, p::Params)
     Δx² = d.Δx^2
     Δy² = d.Δy^2
     Δz² = d.Δz^2

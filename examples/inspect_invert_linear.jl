@@ -3,6 +3,13 @@ using IterativeSolvers
 using Random
 import PyPlot; const plt = PyPlot
 
+# Define functional form of PV anomaly
+function q′(x, y, z, A, L, H, p::Params)
+    πc = p.π0 - 0.5
+    Π = p.Π
+    return A*exp(-(x^2 + y^2)/L^2)*exp(-(z-πc)^2/H^2)
+end
+
 # Set up inversion domain
 params = Params(Float64)
 domain = Domain(params, size = (3, 3, 3), x = (-1, 1)./2, y = (-1, 1)./2)
@@ -10,15 +17,17 @@ println(params)
 println(domain)
 
 # Allocate storage for fields and vectors
-ψ, ϕ, q = allocate_fields(domain)
-xψ, ∂ψ, bψ, xϕ, ∂ϕ, bϕ = allocate_rhs(domain)
+ψ, q = allocate_linear_fields(domain)
+xψ, ∂ψ, bψ = allocate_linear_rhs(domain)
 
 # Set initial values
 set_background_ψ!(ψ, domain, params)
-set_background_ϕ!(ϕ, domain, params)
 
 # Set PV field
-set_q!(q, domain, params)
+A = 0.1
+L = 0.1
+H = 0.1
+set_q!(q, domain, params, q′, A, L, H, params)
 
 # Plot fields
 plt.rc("font", size = 8)
@@ -35,7 +44,7 @@ axes[1].invert_yaxis()
 plt.show()
 
 # Construct linear operator for QG-like inversion
-Lψ = generate_qg_Lψ(domain; T = float_type(params))
+Lψ = generate_linear_Lψ(domain; T = float_type(params))
 
 # Plot operators
 plt.figure()
@@ -44,7 +53,6 @@ plt.show()
 
 # Fill halos
 fill_ψ_halos!(ψ, domain, params)
-fill_ϕ_halos!(ϕ, domain, params)
 
 # Re-plot fields
 fig, axes = plt.subplots(
@@ -65,7 +73,7 @@ plt.imshow(Matrix(Lψ))
 plt.show()
 
 # Set boundary contributions to RHS 
-set_qg_∂ψ!(∂ψ, domain, params)
+set_linear_∂ψ!(∂ψ, domain, params)
 
 # Plot boundary contributions
 f∂ψ = field_from_rhs(∂ψ, domain)
@@ -82,7 +90,7 @@ axes[1].invert_yaxis()
 plt.show()
 
 # Set RHS
-set_qg_bψ!(bψ, q, domain)
+set_linear_bψ!(bψ, q, domain)
 
 # Plot q and RHS
 fbψ = field_from_rhs(bψ, domain)
