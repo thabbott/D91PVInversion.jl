@@ -53,3 +53,11 @@ end
 function fill_ϕ_halos!(ϕ, d::Domain, p::Params)
     return fill_halos!(ϕ, d, (z) -> background_ϕ(z, p))
 end
+
+function fill_ψ′_halos!(ψ′, d::Domain)
+    return fill_halos!(ψ′, d, (z) -> 0.0)
+end
+
+function fill_ϕ′_halos!(ϕ′, d::Domain)
+    return fill_halos!(ϕ′, d, (z) -> 0.0)
+end

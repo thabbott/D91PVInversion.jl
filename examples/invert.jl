@@ -7,7 +7,6 @@ import PyPlot; const plt = PyPlot
 # Define functional form of PV anomaly
 function q′(x, y, z, A, L, H, p)
     πc = p.π0 - 0.5
-    Π = p.Π
     return A*exp(-(x^2 + y^2)/L^2)*exp(-(z-πc)^2/H^2)
 end
 
@@ -16,10 +15,13 @@ params = Params(Float64)
 domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
 
 # Create inversion problem
-inv = NLInversion(domain = domain, params = params)
+inv = NLInversion(
+    domain = domain, params = params; 
+    sψ = Solver(params; ω = 0.2), sϕ = Solver(params; ω = 0.2)
+)
 
 # Initialize problem
-A = 30
+A = 100
 L = 0.1
 H = 0.1
 initialize!(inv, q′, A, L, H, params)
@@ -60,16 +62,16 @@ fig, axes = plt.subplots(
 )
 c = axes[1].contour(x, z, qmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[1].set_title(@sprintf("q\nmax %.1e\ncontour interval %.1e", maximum(q), Δc))
+axes[1].set_title(@sprintf("q\nmax %.1e\ncontour interval %.1e", maximum(qmid), Δc))
 c = axes[2].contour(x, z, vmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[2].set_title(@sprintf("v\nmax %.1e\ncontour interval %.1e", maximum(v), Δc))
+axes[2].set_title(@sprintf("v\nmax %.1e\ncontour interval %.1e", maximum(vmid), Δc))
 c = axes[3].contour(x, z, ζmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[3].set_title(@sprintf("ζ\nmax %.1e\ncontour interval %.1e", maximum(ζ), Δc))
+axes[3].set_title(@sprintf("ζ\nmax %.1e\ncontour interval %.1e", maximum(ζmid), Δc))
 c = axes[4].contour(x, z, θmid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN
-axes[4].set_title(@sprintf("θ\nmax %.1e\ncontour interval %.1e", maximum(θ), Δc))
+axes[4].set_title(@sprintf("θ\nmax %.1e\ncontour interval %.1e", maximum(θmid), Δc))
 axes[1].set_xlim([-1, 1])
 axes[1].invert_yaxis()
 plt.show()

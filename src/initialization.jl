@@ -3,7 +3,7 @@ function allocate_fields(d::Domain)
 end
 
 function allocate_linear_fields(d::Domain)
-    return (ψ = new_field(d), q = new_field(d))
+    return (ψ′ = new_field(d), ϕ′ = new_field(d), q′ = new_field(d))
 end
 
 function allocate_rhs(d::Domain)
@@ -15,7 +15,8 @@ end
 
 function allocate_linear_rhs(d::Domain)
     return (
-        ψ = new_rhs(d), ∂ψ = new_rhs(d), bψ = new_rhs(d)
+        ψ′ = new_rhs(d), ∂ψ′ = new_rhs(d), bψ′ = new_rhs(d),
+        ϕ′ = new_rhs(d), ∂ϕ′ = new_rhs(d), bϕ′ = new_rhs(d)
     )
 end
 
@@ -37,11 +38,16 @@ function set_background_ψ!(ψ, d::Domain, p::Params)
 end
 
 function set_q!(q, d::Domain, p::Params, q′::Function, args...)
-    πc = p.π0 - 0.5
-    Π = p.Π
     for I = CartesianIndices(d)
         x, y, z = d[I]
         q[I] = 1 + q′(x, y, z, args...)
+    end
+end
+
+function set_q′!(q′, d::Domain, p::Params, q′fun::Function, args...)
+    for I = CartesianIndices(d)
+        x, y, z = d[I]
+        q′[I] = q′fun(x, y, z, args...)
     end
 end
 

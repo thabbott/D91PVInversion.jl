@@ -1,46 +1,3 @@
-function generate_linear_Lψ(d::Domain; T = Float64)
-    function L!(y::AbstractVector, x::AbstractVector)
-        Δx² = d.Δx^2
-        Δy² = d.Δy^2
-        Δz² = d.Δz^2
-        c = CartesianIndices(d)
-        l = LinearIndices(d)
-        # ∂z² (Neumann BC)
-        for I = c[:,:,1]
-            y[l[I]] = (-x[l[I]] + x[l[I+dz]])/Δz²
-        end
-        for I = c[:,:,2:end-1]
-            y[l[I]] = (x[l[I-dz]] - 2x[l[I]] + x[l[I+dz]])/Δz²
-        end
-        for I = c[:,:,end]
-            y[l[I]] = (x[l[I-dz]] - x[l[I]])/Δz²
-        end
-        # + ∂x² (Dirichlet BC)
-        for I = c[1,:,:]
-            y[l[I]] += (-2x[l[I]] + x[l[I+dx]])/Δx²
-        end
-        for I = c[2:end-1,:,:]
-            y[l[I]] += (x[l[I-dx]] - 2x[l[I]] + x[l[I+dx]])/Δx²
-        end
-        for I = c[end,:,:]
-            y[l[I]] += (x[l[I-dx]] - 2x[l[I]])/Δx²
-        end
-        # + ∂y² (Dirichlet BC)
-        for I = c[:,1,:]
-            y[l[I]] += (-2x[l[I]] + x[l[I+dy]])/Δy²
-        end
-        for I = c[:,2:end-1,:]
-            y[l[I]] += (x[l[I-dy]] - 2x[l[I]] + x[l[I+dy]])/Δy²
-        end
-        for I = c[:,end,:]
-            y[l[I]] += (x[l[I-dy]] - 2x[l[I]])/Δy²
-        end
-    end
-
-    return LinearMap{T}(L!, prod(size(d)); ismutating = true)
-end
-
-
 function generate_Lψ(ϕ, d::Domain; T = Float64)
 
     function L!(y::AbstractVector, x::AbstractVector)
@@ -123,6 +80,9 @@ function generate_Lϕ(ψ, d::Domain; T = Float64)
 
     return LinearMap{T}(L!, prod(size(d)); ismutating = true)
 end
+
+generate_linear_Lψ(ϕ0, d::Domain; T = Float64) = generate_Lψ(ϕ0, d, T = T)
+generate_linear_Lϕ(ψ0, d::Domain; T = Float64) = generate_Lϕ(ψ0, d, T = T)
 
 ∂x(I::CartesianIndex{3},f,d::Domain) = (f[I+dx] - f[I-dx])/(2d.Δx)
 ∂y(I::CartesianIndex{3},f,d::Domain) = (f[I+dy] - f[I-dy])/(2d.Δy)
