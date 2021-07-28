@@ -92,6 +92,19 @@ function is_converged(inv::LinearInversion)
     return is_converged(inv.sψ′) && is_converged(inv.sϕ′)
 end
 
+function save_inversion_results(fname, inv::LinearInversion)
+    is_converged(inv) || throw(ArgumentError("inv has not converged"))
+    jldopen(fname, "w") do file
+        file["ψ0"] =  inv.ψ0
+        file["ϕ0"] =  inv.ϕ0
+        file["ψ′"] =  inv.ψ′
+        file["ϕ′"] =  inv.ϕ′
+        file["q′"] =  inv.q′
+        file["domain"] = inv.domain
+        file["params"] = inv.params
+    end
+end
+
 struct NLInversion{F,R,LS,LG,D,P,S} <: AbstractIterativeInversion
     ψ :: F
     ϕ :: F 
@@ -183,4 +196,15 @@ end
 
 function is_converged(inv::NLInversion)
     return is_converged(inv.sψ) && is_converged(inv.sϕ)
+end
+
+function save_inversion_results(fname, inv::NLInversion)
+    is_converged(inv) || throw(ArgumentError("inv has not converged"))
+    jldopen(fname, "w") do file
+        file["ψ"] =  inv.ψ
+        file["ϕ"] =  inv.ϕ
+        file["q"] =  inv.q
+        file["domain"] = inv.domain
+        file["params"] = inv.params
+    end
 end

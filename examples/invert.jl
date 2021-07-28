@@ -17,11 +17,11 @@ domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
 # Create inversion problem
 inv = NLInversion(
     domain = domain, params = params; 
-    sψ = Solver(params; ω = 0.2), sϕ = Solver(params; ω = 0.2)
+    sψ = Solver(params; ω = 0.7), sϕ = Solver(params; ω = 0.7)
 )
 
 # Initialize problem
-A = 100
+A = 0.0
 L = 0.1
 H = 0.1
 initialize!(inv, q′, A, L, H, params)
@@ -75,3 +75,6 @@ axes[4].set_title(@sprintf("θ\nmax %.1e\ncontour interval %.1e", maximum(θmid)
 axes[1].set_xlim([-1, 1])
 axes[1].invert_yaxis()
 plt.show()
+
+# Save output
+save_inversion_results(@sprintf("output/invert_A%.1f.jld2", A), inv)

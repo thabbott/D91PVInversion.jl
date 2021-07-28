@@ -4,6 +4,7 @@ using OffsetArrays
 using LinearMaps
 using LinearAlgebra
 using IterativeSolvers
+using JLD2
 
 # structs.jl
 export Params, float_type
@@ -28,7 +29,7 @@ export compute_residual
 # relaxation.jl
 export relax!
 # inversions.jl
-export LinearInversion, NLInversion, initialize!, iterate!, is_converged
+export LinearInversion, NLInversion, initialize!, iterate!, is_converged, save_inversion_results
 
 include("structs.jl")
 include("profiles.jl")

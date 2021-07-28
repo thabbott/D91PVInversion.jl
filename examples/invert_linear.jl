@@ -2,6 +2,7 @@ using D91PVInversion
 using IterativeSolvers
 using Random
 using Printf
+using JLD2
 import PyPlot; const plt = PyPlot
 
 # Define functional form of PV anomaly
@@ -14,12 +15,11 @@ end
 params = Params(Float64)
 domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
 
-# Set up background fields
-ψ0, ϕ0, q0 = allocate_fields(domain)
-set_background_ψ!(ψ0, domain, params)
-set_background_ϕ!(ϕ0, domain, params)
-fill_ψ_halos!(ψ0, domain, params)
-fill_ϕ_halos!(ϕ0, domain, params)
+# Load background fields
+B = 0.1
+fname = @sprintf("output/invert_A%.1f.jld2", B)
+ψ0 = load(fname, "ψ")
+ϕ0 = load(fname, "ϕ")
 
 # Create inversion problem
 inv = LinearInversion(
@@ -29,7 +29,7 @@ inv = LinearInversion(
 )
 
 # Initialize problem
-A = 100
+A = 100.0
 L = 0.1
 H = 0.1
 initialize!(inv, q′fun, A, L, H, params)
@@ -83,3 +83,6 @@ axes[4].set_title(@sprintf("θ′\nmax %.1e\ncontour interval %.1e", maximum(θ�
 axes[1].set_xlim([-1, 1])
 axes[1].invert_yaxis()
 plt.show()
+
+# Save output
+save_inversion_results(@sprintf("output/invert_linear_A%.1f_B%.1f.jld", A, B), inv)
