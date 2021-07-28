@@ -23,13 +23,16 @@ export set_linear_∂ψ!, set_linear_∂ϕ!, set_∂ψ!, set_∂ϕ!
 # rhsides.jl
 export set_linear_bψ!, set_linear_bϕ!, set_bψ!, set_bϕ!
 # diagnostics.jl
-export diagnose_u, diagnose_v, diagnose_umag, diagnose_ζ, diagnose_θ
+export diagnose_u, diagnose_v, diagnose_umag, diagnose_ζ, diagnose_θ, diagnose_penetration_depth
 # residuals.jl
 export compute_residual
 # relaxation.jl
 export relax!
 # inversions.jl
 export LinearInversion, NLInversion, initialize!, iterate!, is_converged, save_inversion_results
+# redimensionalize.jl
+export dimensional_π, dimensional_p, dimensional_pseudoz, dimensional_r, dimensional_q, dimensional_u,
+       redimensionalize_q!, redimensionalize_u!
 
 include("structs.jl")
 include("profiles.jl")
@@ -42,5 +45,6 @@ include("diagnostics.jl")
 include("residuals.jl")
 include("relaxation.jl")
 include("inversions.jl")
+include("redimensionalize.jl")
 
 end # module

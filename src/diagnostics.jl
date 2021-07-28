@@ -37,3 +37,12 @@ function diagnose_θ(ϕ, d::Domain)
     end
     return θ
 end
+
+function diagnose_penetration_depth(ψ, q, d::Domain)
+    qmax, Imax = findmax(q)
+    kmax = Imax[3]
+    umag = diagnose_umag(ψ, d)
+    ubot = umag[:,:,1]
+    umax = umag[:,:,kmax]
+    return maximum(ubot)/maximum(umax)
+end
