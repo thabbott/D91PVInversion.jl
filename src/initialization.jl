@@ -46,6 +46,13 @@ function set_q′!(q′, d::Domain, p::Params, q′fun::Function, args...)
     end
 end
 
+function set_from_function!(ρ, d::Domain, ρfun::Function, args...)
+    for I = CartesianIndices(d)
+        x, y, z = d[I]
+        ρ[I] = ρfun(x, y, z, args...)
+    end
+end
+
 # function set_q!(q, d::Domain, p::Params; A = 0.1, L = 0.1, H = 0.1)
 #     πc = p.π0 - 0.5
 #     Π = p.Π

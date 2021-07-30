@@ -13,6 +13,8 @@ export Domain, new_field, new_rhs, dx, dy, dz, halo,
        fields_from_linearized_rhs, fields_from_linearized_rhs!, 
        rhs_from_field, rhs_from_field!
 export Solver, is_converged
+# profiles.jl
+export background_ϕ, background_ψ, background_θ
 # initialization.jl
 export allocate_fields, allocate_rhs, allocate_linearized_rhs, 
        set_background_ψ!, set_background_ϕ!, set_q!, set_q′!
@@ -32,7 +34,8 @@ export compute_residual
 # relaxation.jl
 export relax!
 # inversions.jl
-export LinearizedInversion, NLInversion, initialize!, solve!, iterate!, is_converged, save_inversion_results
+export HorizontalPoissonEquation, LinearizedInversion, NLInversion, 
+       initialize!, solve!, iterate!, is_converged, save_inversion_results
 # redimensionalize.jl
 export dimensional_π, dimensional_p, dimensional_pseudoz, dimensional_r, dimensional_q, dimensional_u,
        redimensionalize_q!, redimensionalize_u!

@@ -1,3 +1,34 @@
+function generate_∇²(d::Domain, T = Float64)
+    function L!(y::AbstractVector, x::AbstractVector)
+        Δx² = d.Δx^2
+        Δy² = d.Δy^2
+        c = CartesianIndices(d)
+        l = LinearIndices(d)
+        @. y = 0
+        # ∂x² (Dirichlet BC)
+        for I = c[1,:,:]
+            y[l[I]] += (-2x[l[I]] + x[l[I+dx]])/Δx²
+        end
+        for I = c[2:end-1,:,:]
+            y[l[I]] += (x[l[I-dx]] - 2x[l[I]] + x[l[I+dx]])/Δx²
+        end
+        for I = c[end,:,:]
+            y[l[I]] += (x[l[I-dx]] - 2x[l[I]])/Δx²
+        end
+        # + ∂y² (Dirichlet BC)
+        for I = c[:,1,:]
+            y[l[I]] += (-2x[l[I]] + x[l[I+dy]])/Δy²
+        end
+        for I = c[:,2:end-1,:]
+            y[l[I]] += (x[l[I-dy]] - 2x[l[I]] + x[l[I+dy]])/Δy²
+        end
+        for I = c[:,end,:]
+            y[l[I]] += (x[l[I-dy]] - 2x[l[I]])/Δy²
+        end
+    end
+    return LinearMap{T}(L!, prod(size(d)); ismutating = true)
+end
+
 function generate_linearized_L(ψ0, ϕ0, d::Domain; T = Float64)
 
     function L!(y::AbstractVector, x::AbstractVector)

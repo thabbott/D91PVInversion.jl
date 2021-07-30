@@ -1,5 +1,45 @@
 abstract type AbstractIterativeInversion end
 
+struct HorizontalPoissonEquation{F,R,L,B,A,D}
+    ϕ :: F
+    ρ :: F
+    x :: R
+    ∂ :: R
+    b :: R
+    L :: L
+    bc :: B
+    args :: A
+    domain :: D
+end
+
+function HorizontalPoissonEquation(domain, dirichlet_bc::Function, bc_args...)
+    ϕ = new_field(domain)
+    ρ = new_field(domain)
+    x = new_rhs(domain)
+    ∂ = new_rhs(domain)
+    b = new_rhs(domain)
+    L = generate_∇²(domain)
+    return HorizontalPoissonEquation(ϕ, ρ, x, ∂, b, L, dirichlet_bc, bc_args, domain)
+end
+
+function solve!(hpe::HorizontalPoissonEquation; verbose = false)
+    ϕ = hpe.ϕ
+    ρ = hpe.ρ
+    x = hpe.x
+    ∂ = hpe.∂
+    b = hpe.b 
+    L = hpe.L
+    bc = hpe.bc
+    args = hpe.args
+    domain = hpe.domain
+    rhs_from_field!(b, ρ, domain)
+    set_∇²_∂!(∂, domain, bc, args...)
+    @. b = b - ∂
+    idrs!(x, L, b; log = false, verbose = verbose)
+    field_from_rhs!(ϕ, x, domain)
+    return hpe
+end
+
 struct LinearizedInversion{F,R,L,D,P,T}
     ψ0   :: F
     ϕ0   :: F
