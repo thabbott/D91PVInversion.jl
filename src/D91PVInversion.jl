@@ -9,19 +9,22 @@ using JLD2
 # structs.jl
 export Params, float_type
 export Domain, new_field, new_rhs, dx, dy, dz, halo,
-       field_from_rhs, field_from_rhs!, rhs_from_field, rhs_from_field!
+       field_from_rhs, field_from_rhs!, 
+       fields_from_linearized_rhs, fields_from_linearized_rhs!, 
+       rhs_from_field, rhs_from_field!
 export Solver, is_converged
 # initialization.jl
-export allocate_fields, allocate_linear_fields, allocate_rhs, allocate_linear_rhs, 
+export allocate_fields, allocate_rhs, allocate_linearized_rhs, 
        set_background_ψ!, set_background_ϕ!, set_q!, set_q′!
 # operators.jl
-export generate_linear_Lψ, generate_linear_Lϕ, generate_Lψ, generate_Lϕ
+export generate_linearized_L, generate_Lψ, generate_Lϕ,
+       ∂x, ∂y, ∂z, ∂x², ∂y², ∂z², ∂xy, ∂xz, ∂yz
 # halos.jl
 export fill_ψ′_halos!, fill_ϕ′_halos!, fill_ψ_halos!, fill_ϕ_halos!
 # boundaries.jl
-export set_linear_∂ψ!, set_linear_∂ϕ!, set_∂ψ!, set_∂ϕ!
+export set_∂ψ!, set_∂ϕ!
 # rhsides.jl
-export set_linear_bψ!, set_linear_bϕ!, set_bψ!, set_bϕ!
+export set_linearized_b!, set_linear_bϕ!, set_bψ!, set_bϕ!
 # diagnostics.jl
 export diagnose_u, diagnose_v, diagnose_umag, diagnose_ζ, diagnose_θ, diagnose_penetration_depth
 # residuals.jl
@@ -29,7 +32,7 @@ export compute_residual
 # relaxation.jl
 export relax!
 # inversions.jl
-export LinearInversion, NLInversion, initialize!, iterate!, is_converged, save_inversion_results
+export LinearizedInversion, NLInversion, initialize!, solve!, iterate!, is_converged, save_inversion_results
 # redimensionalize.jl
 export dimensional_π, dimensional_p, dimensional_pseudoz, dimensional_r, dimensional_q, dimensional_u,
        redimensionalize_q!, redimensionalize_u!

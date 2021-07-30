@@ -78,6 +78,9 @@ end
 function new_rhs(d::Domain)
     return zeros(prod(size(d)))
 end
+function new_linearized_rhs(d::Domain)
+    return zeros(2*prod(size(d)))
+end
 function field_from_rhs!(f, rhs, d::Domain)
     l = LinearIndices(d)
     c = CartesianIndices(d)
@@ -89,6 +92,23 @@ end
 function field_from_rhs(rhs, d::Domain)
     f = new_field(d)
     return field_from_rhs!(f, rhs, d)
+end
+function fields_from_linearized_rhs!(ϕ, ψ, rhs, d::Domain)
+    c = CartesianIndices(d)
+    l = LinearIndices(d)
+    ol = last(l)
+    xϕ = @view rhs[1:ol]
+    xψ = @view rhs[ol+1:end]
+    for I = c
+        ϕ[I] = xϕ[l[I]]
+        ψ[I] = xψ[l[I]]
+    end
+    return (ϕ, ψ)
+end
+function fields_from_linearized_rhs(rhs, d::Domain)
+    ϕ = new_field(d)
+    ψ = new_field(d)
+    return fields_from_linearized_rhs!(ϕ, ψ, rhs, d)
 end
 function rhs_from_field!(rhs, f, d::Domain)
     l = LinearIndices(d)

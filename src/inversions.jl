@@ -1,99 +1,67 @@
 abstract type AbstractIterativeInversion end
 
-struct LinearInversion{F,R,LS,LP,D,P,S} <: AbstractIterativeInversion
+struct LinearizedInversion{F,R,L,D,P,T}
     ψ0   :: F
     ϕ0   :: F
     ψ′   :: F
     ϕ′   :: F
     q′   :: F
-    xψ′  :: R
-    ∂ψ′  :: R
-    bψ′  :: R
-    xϕ′  :: R
-    ∂ϕ′  :: R
-    bϕ′  :: R
-    Lψ′ :: LS
-    Lϕ′ :: LP
+    x  :: R
+    b  :: R
+    L :: L
     domain :: D 
     params :: P
-    sψ′ :: S
-    sϕ′ :: S
+    atolϕ :: T
 end
 
-function LinearInversion(;
-    ψ0, ϕ0, domain, params,
-    sψ′ = Solver(params; ω = 0.7),
-    sϕ′ = Solver(params; ω = 0.7)
+function LinearizedInversion(;
+    ψ0, ϕ0, domain, params, atolϕ = 1.0
 )
-    ψ′, ϕ′, q′ = allocate_linear_fields(domain)
-    xψ′, ∂ψ′, bψ′, xϕ′, ∂ϕ′, bϕ′ = allocate_linear_rhs(domain)
-    Lψ′ = generate_linear_Lψ(ϕ0, domain; T = float_type(params))
-    Lϕ′ = generate_linear_Lϕ(ψ0, domain; T = float_type(params))
-    return LinearInversion(
+    ψ′, ϕ′, q′ = allocate_fields(domain)
+    x, b = allocate_linearized_rhs(domain)
+    L = generate_linearized_L(ψ0, ϕ0, domain; T = float_type(params))
+    fill_ψ_halos!(ψ0, domain, params)
+    fill_ϕ_halos!(ϕ0, domain, params)
+    atolϕ = atolϕ/(params.S*params.Π^2)
+    return LinearizedInversion(
         ψ0, ϕ0, ψ′, ϕ′, q′, 
-        xψ′, ∂ψ′, bψ′, 
-        xϕ′, ∂ϕ′, bϕ′,
-        Lψ′, Lϕ′, 
-        domain, params, sψ′, sϕ′
+        x, b, L,
+        domain, params,
+        atolϕ
     )
 end
 
-function initialize!(inv::LinearInversion, q′fun::Function, args...)
-    ψ′ = inv.ψ′
-    ϕ′ = inv.ϕ′
+function initialize!(inv::LinearizedInversion, q′fun::Function, args...)
     q′ = inv.q′
     domain = inv.domain
     params = inv.params
-    @. ψ′ = 0
-    @. ϕ′ = 0
     set_q′!(q′, domain, params, q′fun, args...)
-    fill_ψ′_halos!(ψ′, domain)
-    fill_ϕ′_halos!(ϕ′, domain)
     return inv
 end
 
-function iterate!(inv::LinearInversion; verbose = false)
-    ψ0 = inv.ψ0
-    ϕ0 = inv.ϕ0
-    ψ′ = inv.ψ′
+function initialize!(inv::LinearizedInversion, q′arr::AbstractArray)
+    @. inv.q′ = q′arr
+    return inv
+end
+
+function solve!(inv::LinearizedInversion; verbose = false, use_atol = true)
     ϕ′ = inv.ϕ′
+    ψ′ = inv.ψ′
     q′ = inv.q′
-    xψ′ = inv.xψ′
-    ∂ψ′ = inv.∂ψ′
-    bψ′ = inv.bψ′
-    xϕ′ = inv.xϕ′
-    ∂ϕ′ = inv.∂ϕ′
-    bϕ′ = inv.bϕ′
-    Lψ′ = inv.Lψ′
-    Lϕ′ = inv.Lϕ′
+    x = inv.x
+    b = inv.b
+    L = inv.L
     domain = inv.domain
-    params = inv.params
-    sψ′ = inv.sψ′
-    sϕ′ = inv.sϕ′
-
-    set_linear_∂ψ!(∂ψ′, ϕ0, domain, params)
-    set_linear_bψ!(bψ′, ψ0, ϕ0, ψ′, ϕ′, q′, domain)
-    @. bψ′ = bψ′ - ∂ψ′
-    bicgstabl!(xψ′, Lψ′, bψ′; log = false, verbose = false)
-    relax!(ψ′, xψ′, sψ′, domain; verbose = verbose)
+    set_linearized_b!(b, q′, domain)
+    atol = use_atol ? inv.atolϕ : zero(eltype(b))
+    idrs!(x, L, b; log = false, verbose = verbose, abstol = atol)
+    fields_from_linearized_rhs!(ϕ′, ψ′, x, domain)
     fill_ψ′_halos!(ψ′, domain)
-
-    set_linear_∂ϕ!(∂ϕ′, ψ0, domain, params)
-    set_linear_bϕ!(bϕ′, ψ0, ϕ0, ψ′, ϕ′, q′, domain)
-    @. bϕ′ = bϕ′ - ∂ϕ′
-    bicgstabl!(xϕ′, Lϕ′, bϕ′; log = false, verbose = false)
-    relax!(ϕ′, xϕ′, sϕ′, domain; verbose = verbose)
     fill_ϕ′_halos!(ϕ′, domain)
-
     return inv
 end
 
-function is_converged(inv::LinearInversion)
-    return is_converged(inv.sψ′) && is_converged(inv.sϕ′)
-end
-
-function save_inversion_results(fname, inv::LinearInversion)
-    is_converged(inv) || throw(ArgumentError("inv has not converged"))
+function save_inversion_results(fname, inv::LinearizedInversion)
     jldopen(fname, "w") do file
         file["ψ0"] =  inv.ψ0
         file["ϕ0"] =  inv.ϕ0
@@ -152,6 +120,20 @@ function initialize!(inv::NLInversion, q′::Function, args...)
     params = inv.params
     set_background_ψ!(ψ, domain, params)
     set_background_ϕ!(ϕ, domain, params)
+    set_q!(q, domain, params, q′, args...)
+    fill_ψ_halos!(ψ, domain, params)
+    fill_ϕ_halos!(ϕ, domain, params)
+    return inv
+end
+
+function initialize!(inv::NLInversion, ψi::AbstractArray, ϕi::AbstractArray, q′::Function, args...)
+    ψ = inv.ψ
+    ϕ = inv.ϕ
+    q = inv.q
+    domain = inv.domain
+    params = inv.params
+    @. ψ = ψi
+    @. ϕ = ϕi
     set_q!(q, domain, params, q′, args...)
     fill_ψ_halos!(ψ, domain, params)
     fill_ϕ_halos!(ϕ, domain, params)

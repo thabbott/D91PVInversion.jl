@@ -1,3 +1,239 @@
+function generate_linearized_L(ψ0, ϕ0, d::Domain; T = Float64)
+
+    function L!(y::AbstractVector, x::AbstractVector)
+
+        # Set up indices and views
+        Δx = d.Δx
+        Δy = d.Δy
+        Δz = d.Δz
+        c = CartesianIndices(d)
+        l = LinearIndices(d)
+        oc = last(c)
+        ol = last(l)
+        ϕ′ = @view x[1:ol]
+        ψ′ = @view x[ol+1:end]
+        q′ = @view y[1:ol]
+        nil = @view y[ol+1:end]
+
+        # Compute q′
+        @. q′ = 0
+        # (1 + ∇²ψ0)*∂z²ϕ′ (Neumann BC)
+        for I = c[:,:,1]
+            q′[l[I]] += (1 + ∂x²(I,ψ0,d) + ∂y²(I,ψ0,d))*(-ϕ′[l[I]] + ϕ′[l[I+dz]])/Δz^2
+        end
+        for I = c[:,:,2:end-1]
+            q′[l[I]] += (1 + ∂x²(I,ψ0,d) + ∂y²(I,ψ0,d))*(ϕ′[l[I-dz]] - 2ϕ′[l[I]] + ϕ′[l[I+dz]])/Δz^2
+        end
+        for I = c[:,:,end]
+            q′[l[I]] += (1 + ∂x²(I,ψ0,d) + ∂y²(I,ψ0,d))*(ϕ′[l[I-dz]] - ϕ′[l[I]])/Δz^2
+        end
+        # ∂z²ϕ0*∂x²ψ′ (Dirichlet BC)
+        for I = c[1,:,:]
+            q′[l[I]] += ∂z²(I,ϕ0,d)*(-2ψ′[l[I]] + ψ′[l[I+dx]])/Δx^2
+        end
+        for I = c[2:end-1,:,:]
+            q′[l[I]] += ∂z²(I,ϕ0,d)*(ψ′[l[I-dx]] - 2ψ′[l[I]] + ψ′[l[I+dx]])/Δx^2
+        end
+        for I = c[end,:,:]
+            q′[l[I]] += ∂z²(I,ϕ0,d)*(ψ′[l[I-dx]] - 2ψ′[l[I]])/Δx^2
+        end
+        # ∂z²ϕ0*∂y²ψ′ (Dirichlet BC)
+        for I = c[:,1,:]
+            q′[l[I]] += ∂z²(I,ϕ0,d)*(-2ψ′[l[I]] + ψ′[l[I+dy]])/Δy^2
+        end
+        for I = c[:,2:end-1,:]
+            q′[l[I]] += ∂z²(I,ϕ0,d)*(ψ′[l[I-dy]] - 2ψ′[l[I]] + ψ′[l[I+dy]])/Δy^2
+        end
+        for I = c[:,end,:]
+            q′[l[I]] += ∂z²(I,ϕ0,d)*(ψ′[l[I-dy]] - 2ψ′[l[I]])/Δy^2
+        end
+        # -∂xzψ0*∂xzϕ′ (Neumann on z, Dirichlet on x)
+        for I = c[1,:,1]         # x bottom, z bottom
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I+dx+dz]] - ϕ′[l[I+dx]])/(4*Δx*Δz)
+        end
+        for I = c[2:end-1,:,1]   # x interior, z bottom
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I+dx+dz]] + ϕ′[l[I-dx]] - ϕ′[l[I-dx+dz]] - ϕ′[l[I+dx]])/(4*Δx*Δz)
+        end
+        for I = c[end,:,1]       # x top, z bottom
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I-dx]] - ϕ′[l[I-dx+dz]])/(4*Δx*Δz)
+        end
+        for I = c[1,:,2:end-1]     # x bottom, z interior
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I+dx+dz]] - ϕ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[2:end-1,:,2:end-1] # x interior, z interior
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I+dx+dz]] + ϕ′[l[I-dx-dz]] - ϕ′[l[I-dx+dz]] - ϕ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[end,:,2:end-1]   # x top, z interior
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I-dx-dz]] - ϕ′[l[I-dx+dz]])/(4*Δx*Δz)
+        end
+        for I = c[1,:,end]       # x bottom, z top
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I+dx]] - ϕ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[2:end-1,:,end]   # x interior, z top
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I+dx]] + ϕ′[l[I-dx-dz]] - ϕ′[l[I-dx]] - ϕ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[end,:,end]     # x top, z top
+            q′[l[I]] += -∂xz(I,ψ0,d)*(ϕ′[l[I-dx-dz]] - ϕ′[l[I-dx]])/(4*Δx*Δz)
+        end
+        # -∂xzϕ0*∂xzψ′ (Neumann on z, Dirichlet on x)
+        for I = c[1,:,1]         # x bottom, z bottom
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I+dx+dz]] - ψ′[l[I+dx]])/(4*Δx*Δz)
+        end
+        for I = c[2:end-1,:,1]   # x interior, z bottom
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I+dx+dz]] + ψ′[l[I-dx]] - ψ′[l[I-dx+dz]] - ψ′[l[I+dx]])/(4*Δx*Δz)
+        end
+        for I = c[end,:,1]       # x top, z bottom
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I-dx]] - ψ′[l[I-dx+dz]])/(4*Δx*Δz)
+        end
+        for I = c[1,:,2:end-1]     # x bottom, z interior
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I+dx+dz]] - ψ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[2:end-1,:,2:end-1] # x interior, z interior
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I+dx+dz]] + ψ′[l[I-dx-dz]] - ψ′[l[I-dx+dz]] - ψ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[end,:,2:end-1]   # x top, z interior
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I-dx-dz]] - ψ′[l[I-dx+dz]])/(4*Δx*Δz)
+        end
+        for I = c[1,:,end]       # x bottom, z top
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I+dx]] - ψ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[2:end-1,:,end]   # x interior, z top
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I+dx]] + ψ′[l[I-dx-dz]] - ψ′[l[I-dx]] - ψ′[l[I+dx-dz]])/(4*Δx*Δz)
+        end
+        for I = c[end,:,end]     # x top, z top
+            q′[l[I]] += -∂xz(I,ϕ0,d)*(ψ′[l[I-dx-dz]] - ψ′[l[I-dx]])/(4*Δx*Δz)
+        end
+        # -∂yzψ0*∂yzϕ′ (Neumann on z, Dirichlet on y)
+        for I = c[:,1,1]         # y bottom, z bottom
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I+dy+dz]] - ϕ′[l[I+dy]])/(4*Δy*Δz)
+        end
+        for I = c[:,2:end-1,1]   # y interior, z bottom
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I+dy+dz]] + ϕ′[l[I-dy]] - ϕ′[l[I-dy+dz]] - ϕ′[l[I+dy]])/(4*Δy*Δz)
+        end
+        for I = c[:,end,1]       # y top, z bottom
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I-dy]] - ϕ′[l[I-dy+dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,1,2:end-1]     # y bottom, z interior
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I+dy+dz]] - ϕ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,2:end-1,2:end-1] # y interior, z interior
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I+dy+dz]] + ϕ′[l[I-dy-dz]] - ϕ′[l[I-dy+dz]] - ϕ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,end,2:end-1]   # y top, z interior
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I-dy-dz]] - ϕ′[l[I-dy+dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,1,end]       # y bottom, z top
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I+dy]] - ϕ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,2:end-1,end]   # y interior, z top
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I+dy]] + ϕ′[l[I-dy-dz]] - ϕ′[l[I-dy]] - ϕ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,end,end]     # y top, z top
+            q′[l[I]] += -∂yz(I,ψ0,d)*(ϕ′[l[I-dy-dz]] - ϕ′[l[I-dy]])/(4*Δy*Δz)
+        end
+        # -∂yzϕ0*∂yzψ′ (Neumann on z, Dirichlet on y)
+        for I = c[:,1,1]         # y bottom, z bottom
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I+dy+dz]] - ψ′[l[I+dy]])/(4*Δy*Δz)
+        end
+        for I = c[:,2:end-1,1]   # y interior, z bottom
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I+dy+dz]] + ψ′[l[I-dy]] - ψ′[l[I-dy+dz]] - ψ′[l[I+dy]])/(4*Δy*Δz)
+        end
+        for I = c[:,end,1]       # y top, z bottom
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I-dy]] - ψ′[l[I-dy+dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,1,2:end-1]     # y bottom, z interior
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I+dy+dz]] - ψ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,2:end-1,2:end-1] # y interior, z interior
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I+dy+dz]] + ψ′[l[I-dy-dz]] - ψ′[l[I-dy+dz]] - ψ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,end,2:end-1]   # y top, z interior
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I-dy-dz]] - ψ′[l[I-dy+dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,1,end]       # y bottom, z top
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I+dy]] - ψ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,2:end-1,end]   # y interior, z top
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I+dy]] + ψ′[l[I-dy-dz]] - ψ′[l[I-dy]] - ψ′[l[I+dy-dz]])/(4*Δy*Δz)
+        end
+        for I = c[:,end,end]     # y top, z top
+            q′[l[I]] += -∂yz(I,ϕ0,d)*(ψ′[l[I-dy-dz]] - ψ′[l[I-dy]])/(4*Δy*Δz)
+        end
+        
+        # Compute residual of nonlinear balance equation
+        @. nil = 0
+        # ∂x²ϕ′ - (1 + 2∂y²ψ0)∂x²ψ′ (Dirichlet BC)
+        for I = c[1,:,:]
+            nil[l[I]] += (
+                (-2ϕ′[l[I]] + ϕ′[l[I+dx]])
+              - (1 + 2*∂y²(I,ψ0,d))*(-2ψ′[l[I]] + ψ′[l[I+dx]])
+            )/Δx^2
+        end
+        for I = c[2:end-1,:,:]
+            nil[l[I]] += (
+                (ϕ′[l[I-dx]] - 2ϕ′[l[I]] + ϕ′[l[I+dx]])
+              - (1 + 2*∂y²(I,ψ0,d))*(ψ′[l[I-dx]] - 2ψ′[l[I]] + ψ′[l[I+dx]])
+            )/Δx^2
+        end
+        for I = c[end,:,:]
+            nil[l[I]] += (
+                (ϕ′[l[I-dx]] - 2ϕ′[l[I]])
+              - (1 + 2*∂y²(I,ψ0,d))*(ψ′[l[I-dx]] - 2ψ′[l[I]])
+            )/Δx^2
+        end
+        # ∂y²ϕ′ - (1 + 2∂x²ψ0)∂y²ψ′ (Dirichlet BC)
+        for I = c[:,1,:]
+            nil[l[I]] += (
+                (-2ϕ′[l[I]] + ϕ′[l[I+dy]])
+              - (1 + 2*∂x²(I,ψ0,d))*(-2ψ′[l[I]] + ψ′[l[I+dy]])
+            )/Δy^2
+        end
+        for I = c[:,2:end-1,:]
+            nil[l[I]] += (
+                (ϕ′[l[I-dy]] - 2ϕ′[l[I]] + ϕ′[l[I+dy]])
+              - (1 + 2*∂x²(I,ψ0,d))*(ψ′[l[I-dy]] - 2ψ′[l[I]] + ψ′[l[I+dy]])
+            )/Δy^2
+        end
+        for I = c[:,end,:]
+            nil[l[I]] += (
+                (ϕ′[l[I-dy]] - 2ϕ′[l[I]])
+              - (1 + 2*∂x²(I,ψ0,d))*(ψ′[l[I-dy]] - 2ψ′[l[I]])
+            )/Δy^2
+        end
+        # 4∂xyψ0*∂xyψ′ (Dirichlet BC)
+        for I = c[1,1,:]             # x bottom, y bottom     
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I+dx+dy]])/(4*Δx*Δy)
+        end
+        for I = c[2:end-1,1,:]       # x interior, y bottom
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I+dx+dy]] - ψ′[l[I-dx+dy]])/(4*Δx*Δy)
+        end
+        for I = c[end,1,:]           # x top, y bottom
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(-ψ′[l[I-dx+dy]])/(4*Δx*Δy)
+        end
+        for I = c[1,2:end-1,:]       # x bottom, y interior
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I+dx+dy]] - ψ′[l[I+dx-dy]])/(4*Δx*Δy)
+        end
+        for I = c[2:end-1,2:end-1,:] # x interior, y interior
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I+dx+dy]] + ψ′[l[I-dx-dy]] - ψ′[l[I-dx+dy]] - ψ′[l[I+dx-dy]])/(4*Δx*Δy)
+        end
+        for I = c[end,2:end-1,:]     # x top, y interior
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I-dx-dy]] - ψ′[l[I-dx+dy]])/(4*Δx*Δy)
+        end
+        for I = c[1,end,:]           # x bottom, y top
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(-ψ′[l[I+dx-dy]])/(4*Δx*Δy)     
+        end
+        for I = c[2:end-1,end,:]     # x interior, y top
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I-dx-dy]] - ψ′[l[I+dx-dy]])/(4*Δx*Δy)
+        end
+        for I = c[end,end,:]         # x top, y top
+            nil[l[I]] += 4*∂xy(I,ψ0,d)*(ψ′[l[I-dx-dy]])/(4*Δx*Δy)
+        end
+
+    end
+
+    return LinearMap{T}(L!, 2*prod(size(d)); ismutating = true)
+end
+
 function generate_Lψ(ϕ, d::Domain; T = Float64)
 
     function L!(y::AbstractVector, x::AbstractVector)
@@ -80,9 +316,6 @@ function generate_Lϕ(ψ, d::Domain; T = Float64)
 
     return LinearMap{T}(L!, prod(size(d)); ismutating = true)
 end
-
-generate_linear_Lψ(ϕ0, d::Domain; T = Float64) = generate_Lψ(ϕ0, d, T = T)
-generate_linear_Lϕ(ψ0, d::Domain; T = Float64) = generate_Lϕ(ψ0, d, T = T)
 
 ∂x(I::CartesianIndex{3},f,d::Domain) = (f[I+dx] - f[I-dx])/(2d.Δx)
 ∂y(I::CartesianIndex{3},f,d::Domain) = (f[I+dy] - f[I-dy])/(2d.Δy)

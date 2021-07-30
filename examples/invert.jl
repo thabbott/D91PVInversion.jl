@@ -21,7 +21,7 @@ inv = NLInversion(
 )
 
 # Initialize problem
-A = 0.0
+A = 0.1
 L = 0.1
 H = 0.1
 initialize!(inv, q′, A, L, H, params)

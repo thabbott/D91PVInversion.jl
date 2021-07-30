@@ -22,24 +22,20 @@ fname = @sprintf("output/invert_A%.1f.jld2", B)
 ϕ0 = load(fname, "ϕ")
 
 # Create inversion problem
-inv = LinearInversion(
+inv = LinearizedInversion(
     ψ0 = ψ0, ϕ0 = ϕ0,
-    domain = domain, params = params,
-    sψ′ = Solver(params; ω = 0.7), sϕ′ = Solver(params; ω = 0.7)
+    domain = domain, params = params
 )
 
 # Initialize problem
-A = 100.0
+A = 1.0
 L = 0.1
 H = 0.1
 initialize!(inv, q′fun, A, L, H, params)
 
 # Solve
 Random.seed!(1234)
-while true
-    iterate!(inv; verbose = true)
-    is_converged(inv) && break
-end
+solve!(inv; verbose = true)
 
 # Compute diagnostics
 ψ′ = inv.ψ′
@@ -85,4 +81,4 @@ axes[1].invert_yaxis()
 plt.show()
 
 # Save output
-save_inversion_results(@sprintf("output/invert_linear_A%.1f_B%.1f.jld", A, B), inv)
+save_inversion_results(@sprintf("output/invert_linear_A%.1f_B%.1f.jld2", A, B), inv)

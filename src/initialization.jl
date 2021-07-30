@@ -2,10 +2,6 @@ function allocate_fields(d::Domain)
     return (ψ = new_field(d), ϕ = new_field(d), q = new_field(d))
 end
 
-function allocate_linear_fields(d::Domain)
-    return (ψ′ = new_field(d), ϕ′ = new_field(d), q′ = new_field(d))
-end
-
 function allocate_rhs(d::Domain)
     return (
         ψ = new_rhs(d), ∂ψ = new_rhs(d), bψ = new_rhs(d),
@@ -13,10 +9,9 @@ function allocate_rhs(d::Domain)
     )
 end
 
-function allocate_linear_rhs(d::Domain)
+function allocate_linearized_rhs(d::Domain)
     return (
-        ψ′ = new_rhs(d), ∂ψ′ = new_rhs(d), bψ′ = new_rhs(d),
-        ϕ′ = new_rhs(d), ∂ϕ′ = new_rhs(d), bϕ′ = new_rhs(d)
+        x = new_linearized_rhs(d), b = new_linearized_rhs(d)
     )
 end
 
