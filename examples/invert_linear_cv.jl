@@ -21,31 +21,14 @@ params = Params(Float64)
 domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
 
 # Compute idealized background fields
-B = 1.0
+B = 0.1
 L = 0.5
-ψ_bc(p) = (x, y, z) -> background_ψ(z,p)
-hpe = HorizontalPoissonEquation(domain, ψ_bc(params))
-q0 = new_field(domain)
-ρ = hpe.ρ
-ψ0 = hpe.ϕ
-for I = CartesianIndices(domain)
-    x, y, z = domain[I]
-    ρ[I] = bgq′fun(x, y, z, B, L)
-    q0[I] = 1 + ρ[I]
-end
-Random.seed!(1234)
-solve!(hpe, verbose = true)
-fill_ψ_halos!(ψ0, domain, params)
-ϕ_bc(p) = (x, y, z) -> background_ϕ(z,p)
-hpe = HorizontalPoissonEquation(domain, ϕ_bc(params))
-ρ = hpe.ρ
-ϕ0 = hpe.ϕ
-d = domain
-for I = CartesianIndices(d)
-    ρ[I] = ∂x²(I,ψ0,d) + ∂y²(I,ψ0,d) + 2*(∂x²(I,ψ0,d)*∂y²(I,ψ0,d) - (∂xy(I,ψ0,d)^2))
-end
-solve!(hpe, verbose = true)
-fill_ϕ_halos!(ϕ0, domain, params)
+inv = ColumnarVortex(domain = domain, params = params)
+initialize!(inv, bgq′fun, B, L)
+solve!(inv; verbose = true)
+ψ0 = inv.ψ
+ϕ0 = inv.ϕ
+q0 = inv.q
 
 # Compute diagnostics
 u0 = diagnose_umag(ψ0, domain)
@@ -71,7 +54,7 @@ fig, axes = plt.subplots(
     figsize = (9.5, 3), nrows = 1, ncols = 4, 
     sharey = true, sharex = true, constrained_layout = true
 )
-axes[1].set_xlim([-1, 1])
+axes[1].set_xlim([-2, 2])
 axes[1].invert_yaxis()
 c = axes[1].contour(x, z, q0mid', colors = "black")
 Δc = length(c.levels) > 1 ? c.levels[2] - c.levels[1] : NaN

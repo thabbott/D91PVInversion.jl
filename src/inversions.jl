@@ -1,43 +1,75 @@
 abstract type AbstractIterativeInversion end
 
-struct HorizontalPoissonEquation{F,R,L,B,A,D}
+struct ColumnarVortex{F,R,L,D,P}
+    ψ :: F
     ϕ :: F
-    ρ :: F
+    q :: F
     x :: R
     ∂ :: R
     b :: R
     L :: L
-    bc :: B
-    args :: A
     domain :: D
+    params :: P
 end
 
-function HorizontalPoissonEquation(domain, dirichlet_bc::Function, bc_args...)
+function ColumnarVortex(; domain, params)
+    ψ = new_field(domain)
     ϕ = new_field(domain)
+    q = new_field(domain)
     ρ = new_field(domain)
     x = new_rhs(domain)
     ∂ = new_rhs(domain)
     b = new_rhs(domain)
     L = generate_∇²(domain)
-    return HorizontalPoissonEquation(ϕ, ρ, x, ∂, b, L, dirichlet_bc, bc_args, domain)
+    return ColumnarVortex(ψ, ϕ, q, x, ∂, b, L, domain, params)
 end
 
-function solve!(hpe::HorizontalPoissonEquation; verbose = false)
-    ϕ = hpe.ϕ
-    ρ = hpe.ρ
-    x = hpe.x
-    ∂ = hpe.∂
-    b = hpe.b 
-    L = hpe.L
-    bc = hpe.bc
-    args = hpe.args
-    domain = hpe.domain
-    rhs_from_field!(b, ρ, domain)
-    set_∇²_∂!(∂, domain, bc, args...)
+function initialize!(inv::ColumnarVortex, q′fun::Function, args...)
+    q′hfun = (x, y, z, args...) -> q′fun(x, y, NaN, args...)
+    q = inv.q
+    domain = inv.domain
+    params = inv.params
+    set_q!(q, domain, params, q′hfun, args...)
+    return inv
+end
+
+function solve!(inv::ColumnarVortex; verbose = false)
+    ψ = inv.ψ
+    ϕ = inv.ϕ
+    q = inv.q
+    x = inv.x
+    b = inv.b
+    ∂ = inv.∂
+    L = inv.L
+    domain = inv.domain
+    params = inv.params
+
+    set_cv_∂ψ!(∂, domain, params)
+    set_cv_bψ!(b, q, domain)
+    @. b = b - ∂
+    idrs!(x, L, b; log = false, verbose = verbose)
+    field_from_rhs!(ψ, x, domain)
+    fill_ψ_halos!(ψ, domain, params)
+
+    set_cv_∂ϕ!(∂, domain, params)
+    set_cv_bϕ!(b, ψ, domain)
     @. b = b - ∂
     idrs!(x, L, b; log = false, verbose = verbose)
     field_from_rhs!(ϕ, x, domain)
-    return hpe
+    fill_ϕ_halos!(ϕ, domain, params)
+
+    return inv
+
+end
+
+function save_inversion_results(fname, inv::ColumnarVortex)
+    jldopen(fname, "w") do file
+        file["ψ"] =  inv.ψ
+        file["ϕ"] =  inv.ϕ
+        file["q′"] =  inv.q
+        file["domain"] = inv.domain
+        file["params"] = inv.params
+    end
 end
 
 struct LinearizedInversion{F,R,L,D,P,T}

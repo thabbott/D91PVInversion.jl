@@ -1,29 +1,3 @@
-function set_∇²_∂!(∂, d::Domain, bc::Function)
-    Δx² = d.Δx^2
-    Δy² = d.Δy^2
-    c = CartesianIndices(d)
-    l = LinearIndices(d)
-    @. ∂ = 0
-    # ∂x²
-    for I = c[1,:,:]
-        x, y, z = d[I-dx]
-        ∂[l[I]] += bc(x,y,z)/Δx²
-    end
-    for I = c[end,:,:]
-        x, y, z = d[I+dx]
-        ∂[l[I]] += bc(x,y,z)/Δx²
-    end
-    # + ∂y²
-    for I = c[:,1,:]
-        x, y, z = d[I-dy]
-        ∂[l[I]] += bc(x,y,z)/Δy²
-    end
-    for I = c[:,end,:]
-        x, y, z = d[I+dy]
-        ∂[l[I]] += bc(x,y,z)/Δy²
-    end
-end
-
 function set_∂ψ!(∂ψ, ϕ, d::Domain, p::Params, ψ0::Function)
     Δx² = d.Δx^2
     Δy² = d.Δy^2
@@ -112,4 +86,38 @@ end
 
 function set_∂ϕ!(∂ϕ, ψ, d::Domain, p::Params)
     return set_∂ϕ!(∂ϕ, ψ, d, p, (z) -> background_ϕ(z,p))
+end
+
+function set_∇²_∂!(∂, d::Domain, ϕ0::Function)
+    Δx² = d.Δx^2
+    Δy² = d.Δy^2
+    c = CartesianIndices(d)
+    l = LinearIndices(d)
+    @. ∂ = 0
+    # ∂x²
+    for I = c[1,:,:]
+        x, y, z = d[I-dx]
+        ∂[l[I]] += ϕ0(z)/Δx²
+    end
+    for I = c[end,:,:]
+        x, y, z = d[I+dx]
+        ∂[l[I]] += ϕ0(z)/Δx²
+    end
+    # + ∂y²
+    for I = c[:,1,:]
+        x, y, z = d[I-dy]
+        ∂[l[I]] += ϕ0(z)/Δy²
+    end
+    for I = c[:,end,:]
+        x, y, z = d[I+dy]
+        ∂[l[I]] += ϕ0(z)/Δy²
+    end
+end
+
+function set_cv_∂ψ!(∂ψ, d::Domain, p::Params)
+    return set_∇²_∂!(∂ψ, d, (z) -> background_ψ(z,p))
+end
+
+function set_cv_∂ϕ!(∂ϕ, d::Domain, p::Params)
+    return set_∇²_∂!(∂ϕ, d, (z) -> background_ϕ(z,p))
 end

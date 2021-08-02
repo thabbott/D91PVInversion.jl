@@ -35,3 +35,23 @@ function set_bϕ!(bϕ, ψ, ϕ, q, d::Domain)
     end
     return bϕ
 end
+
+function set_cv_bψ!(bψ, q, d::Domain)
+    c = CartesianIndices(d)
+    l = LinearIndices(d)
+    for I = c
+        bψ[l[I]] = q[I] - 1
+    end
+    return bψ
+end
+function set_cv_bϕ!(bϕ, ψ, d::Domain)
+    c = CartesianIndices(d)
+    l = LinearIndices(d)
+    for I = c
+        bϕ[l[I]] = (
+            ∂x²(I,ψ,d) + ∂y²(I,ψ,d) 
+          + 2*(∂x²(I,ψ,d)*∂y²(I,ψ,d) - (∂xy(I,ψ,d)^2))
+        )
+    end
+    return bϕ
+end

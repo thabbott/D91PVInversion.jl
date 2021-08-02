@@ -34,7 +34,7 @@ export compute_residual
 # relaxation.jl
 export relax!
 # inversions.jl
-export HorizontalPoissonEquation, LinearizedInversion, NLInversion, 
+export ColumnarVortex, LinearizedInversion, NLInversion, 
        initialize!, solve!, iterate!, is_converged, save_inversion_results
 # redimensionalize.jl
 export dimensional_π, dimensional_p, dimensional_pseudoz, dimensional_r, dimensional_q, dimensional_u,
