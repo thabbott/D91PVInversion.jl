@@ -1,6 +1,7 @@
 module D91PVInversion
 
 using OffsetArrays
+using SparseArrays
 using LinearMaps
 using LinearAlgebra
 using IterativeSolvers
@@ -19,8 +20,10 @@ export background_ϕ, background_ψ, background_θ
 export allocate_fields, allocate_rhs, allocate_linearized_rhs, 
        set_background_ψ!, set_background_ϕ!, set_q!, set_q′!
 # operators.jl
-export generate_linearized_L, generate_Lψ, generate_Lϕ,
+export generate_∇², generate_linearized_L, generate_Lψ, generate_Lϕ,
        ∂x, ∂y, ∂z, ∂x², ∂y², ∂z², ∂xy, ∂xz, ∂yz
+# sparse_matrix_operators.jl
+export generate_sparse_linearized_L
 # halos.jl
 export fill_ψ′_halos!, fill_ϕ′_halos!, fill_ψ_halos!, fill_ϕ_halos!
 # boundaries.jl
@@ -34,16 +37,18 @@ export compute_residual
 # relaxation.jl
 export relax!
 # inversions.jl
-export ColumnarVortex, LinearizedInversion, NLInversion, 
+export ColumnarVortex, LinearizedSparseInversion, LinearizedInversion, NLInversion, 
        initialize!, solve!, iterate!, is_converged, save_inversion_results
 # redimensionalize.jl
 export dimensional_π, dimensional_p, dimensional_pseudoz, dimensional_r, dimensional_q, dimensional_u,
        redimensionalize_q!, redimensionalize_u!
 
+include("sparse_utils.jl")
 include("structs.jl")
 include("profiles.jl")
 include("initialization.jl")
 include("operators.jl")
+include("sparse_matrix_operators.jl")
 include("halos.jl")
 include("boundaries.jl")
 include("rhsides.jl")

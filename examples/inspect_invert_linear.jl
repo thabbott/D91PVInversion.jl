@@ -1,5 +1,7 @@
 using D91PVInversion
 using IterativeSolvers
+using LinearAlgebra
+using SparseArrays
 using Random
 import PyPlot; const plt = PyPlot
 
@@ -53,10 +55,23 @@ plt.show()
 
 # Construct linear operators
 L = generate_linearized_L(ψ0, ϕ0, domain)
+S = generate_sparse_linearized_L(ψ0, ϕ0, domain)
 
 # Plot operators
+ML = Matrix(L)
 plt.figure()
-plt.imshow(Matrix(L))
+plt.imshow(ML)
+plt.title(string("L, rank = ", rank(ML), ", κ = ", cond(ML)))
+plt.show()
+
+MS = Matrix(S)
+plt.figure()
+plt.imshow(ML)
+plt.title(string("S, rank = ", rank(MS), ", κ = ", cond(MS)))
+plt.show()
+
+plt.figure()
+plt.imshow(ML - MS)
 plt.show()
 
 # Fill halos
@@ -105,8 +120,28 @@ end
 
 # Solve
 Random.seed!(1234)
-set_linearized_b!(b, q′, domain)
-bicgstabl!(x, L, b; log = false, verbose = true)
+idrs!(x, L, b; log = false, verbose = true)
+fields_from_linearized_rhs!(ϕ′, ψ′, x, domain)
+
+# Plot solution
+fig, axes = plt.subplots(
+    figsize = (9.5, 2), nrows = 1, ncols = 5, 
+    sharey = true, sharex = true, constrained_layout = true
+)
+for i = 1:5
+    im = axes[i].imshow(ψ′[:,i-1,:]')
+    plt.colorbar(im, ax = axes[i], location = "bottom", aspect = 5, shrink = 0.7)
+    axes[i].set_title(string("ψ′, j = ", i))
+end
+axes[1].invert_yaxis()
+plt.show()
+
+# Solve directly with sparse LU decomposition
+LU = lu(S)
+println("S sparsity = ", nnz(S)/length(S))
+println("L sparsity = ", nnz(LU.L)/length(LU.L))
+println("U sparsity = ", nnz(LU.U)/length(LU.U))
+ldiv!(x, LU, b)
 fields_from_linearized_rhs!(ϕ′, ψ′, x, domain)
 
 # Plot solution

@@ -66,7 +66,92 @@ function save_inversion_results(fname, inv::ColumnarVortex)
     jldopen(fname, "w") do file
         file["ψ"] =  inv.ψ
         file["ϕ"] =  inv.ϕ
-        file["q′"] =  inv.q
+        file["q"] =  inv.q
+        file["domain"] = inv.domain
+        file["params"] = inv.params
+    end
+end
+
+struct LinearizedSparseInversion{F,R,S,LU,D,P}
+    ψ0   :: F
+    ϕ0   :: F
+    ψ′   :: F
+    ϕ′   :: F
+    q′   :: F
+    x  :: R
+    b  :: R
+    S :: S
+    LU :: LU
+    domain :: D 
+    params :: P
+end
+
+function LinearizedSparseInversion(;
+    ψ0, ϕ0, domain, params, verbose = false
+)
+    verbose && println("Allocating fields and RHS vectors")
+    ψ′, ϕ′, q′ = allocate_fields(domain)
+    x, b = allocate_linearized_rhs(domain)
+    fill_ψ_halos!(ψ0, domain, params)
+    fill_ϕ_halos!(ϕ0, domain, params)
+    verbose && println("Allocation complete")
+
+    verbose && println("Assembling sparse matrix operator")
+    S = generate_sparse_linearized_L(ψ0, ϕ0, domain)
+    verbose && println("Operator assembly complete")
+    verbose && print_sparse_statistics(S)
+
+    verbose && println("Computing LU decomposition")
+    LU = lu(S)
+    verbose && println("LU decomposition complete")
+    verbose && println("Lower triangular factor:")
+    verbose && print_sparse_statistics(LU.L)
+    verbose && println("Upper triangular factor:")
+    verbose && print_sparse_statistics(LU.U)
+    
+    return LinearizedSparseInversion(
+        ψ0, ϕ0, ψ′, ϕ′, q′, 
+        x, b, S, LU,
+        domain, params
+    )
+end
+
+function initialize!(inv::LinearizedSparseInversion, q′fun::Function, args...)
+    q′ = inv.q′
+    domain = inv.domain
+    params = inv.params
+    set_q′!(q′, domain, params, q′fun, args...)
+    return inv
+end
+
+function initialize!(inv::LinearizedSparseInversion, q′arr::AbstractArray)
+    @. inv.q′ = q′arr
+    return inv
+end
+
+function solve!(inv::LinearizedSparseInversion)
+    ϕ′ = inv.ϕ′
+    ψ′ = inv.ψ′
+    q′ = inv.q′
+    x = inv.x
+    b = inv.b
+    LU = inv.LU
+    domain = inv.domain
+    set_linearized_b!(b, q′, domain)
+    ldiv!(x, LU, b)
+    fields_from_linearized_rhs!(ϕ′, ψ′, x, domain)
+    fill_ψ′_halos!(ψ′, domain)
+    fill_ϕ′_halos!(ϕ′, domain)
+    return inv
+end
+
+function save_inversion_results(fname, inv::LinearizedSparseInversion)
+    jldopen(fname, "w") do file
+        file["ψ0"] =  inv.ψ0
+        file["ϕ0"] =  inv.ϕ0
+        file["ψ′"] =  inv.ψ′
+        file["ϕ′"] =  inv.ϕ′
+        file["q′"] =  inv.q′
         file["domain"] = inv.domain
         file["params"] = inv.params
     end
@@ -116,7 +201,7 @@ function initialize!(inv::LinearizedInversion, q′arr::AbstractArray)
     return inv
 end
 
-function solve!(inv::LinearizedInversion; verbose = false, use_atol = true)
+function solve!(inv::LinearizedInversion; Pl = IterativeSolvers.Identity(), verbose = false, use_atol = true)
     ϕ′ = inv.ϕ′
     ψ′ = inv.ψ′
     q′ = inv.q′
@@ -126,7 +211,7 @@ function solve!(inv::LinearizedInversion; verbose = false, use_atol = true)
     domain = inv.domain
     set_linearized_b!(b, q′, domain)
     atol = use_atol ? inv.atolϕ : zero(eltype(b))
-    idrs!(x, L, b; log = false, verbose = verbose, abstol = atol)
+    idrs!(x, L, b; Pl = Pl, log = false, verbose = verbose, abstol = atol)
     fields_from_linearized_rhs!(ϕ′, ψ′, x, domain)
     fill_ψ′_halos!(ψ′, domain)
     fill_ϕ′_halos!(ϕ′, domain)

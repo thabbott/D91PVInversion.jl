@@ -18,10 +18,10 @@ end
 
 # Set up inversion domain
 params = Params(Float64)
-domain = Domain(params, size = (96, 96, 16), x = (-3, 3), y = (-3, 3))
+domain = Domain(params, size = (48, 48, 8), x = (-3, 3), y = (-3, 3))
 
 # Compute idealized background fields
-B = 10.0
+B = 100.0
 L = 0.5
 inv = ColumnarVortex(domain = domain, params = params)
 initialize!(inv, bgq′fun, B, L)
@@ -79,7 +79,7 @@ fig.canvas.draw()
 plt.clabel(c, inline = true, inline_spacing = 0, manual = true)
 
 # Create inversion problem
-inv = LinearizedInversion(
+inv = LinearizedSparseInversion(
     ψ0 = ψ0, ϕ0 = ϕ0,
     domain = domain, params = params
 )
@@ -91,7 +91,7 @@ H = 0.1
 initialize!(inv, q′fun, A, L, H, params)
 
 # Solve
-solve!(inv; Pl = IterativeSolvers.Identity(), verbose = true)
+solve!(inv)
 
 # Compute diagnostics
 ψ′ = inv.ψ′
@@ -137,4 +137,4 @@ axes[1].invert_yaxis()
 plt.show()
 
 # Save output
-save_inversion_results(@sprintf("output/invert_linear_2_A%.1f_B%.1f.jld2", A, B), inv)
+save_inversion_results(@sprintf("output/invert_sparse_linear_2_A%.1f_B%.1f.jld2", A, B), inv)
